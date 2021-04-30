@@ -117,7 +117,43 @@ def Wannier_centers(hamfunc, params_dict, filled_bands, N):
     
     return centers
 
-if __name__ == "__main__":
+def compare_polarizations():
+    ''' Compare polarizations from different bands and with different masses. '''
+    np.set_printoptions(linewidth=750)
+    
+    params_dict = {'t1':0.99, 
+                   't2':1., 
+                   'm':0.,
+                   'e0':0.}
+    
+    N = 100
+#     filled_bands = [0,1]
+    
+    m_array = np.array([-0.1, -0.001, 0., 0.001, 0.1])
+    smartprint('m_array', m_array)
+    t1_array = np.linspace(-1.5, 1.5, 201, endpoint=True)
+    smartprint('t1_array', t1_array)
+    
+    p_array  = np.zeros(t1_array.shape + m_array.shape + (3,))
+    
+    for band_idx, band in enumerate([0,1,2]):
+        filled_bands = [band]
+        for m_idx, m in enumerate(m_array):
+            for t1_idx, t1 in enumerate(t1_array):
+                
+                params_dict['m'] = m
+                params_dict['t1'] = t1
+                
+                p_array[t1_idx, m_idx, band_idx] = compute_pol(hamSSH, params_dict, filled_bands, N)
+    
+    # Plot p as a function of parameters
+    fig, ax = plt.subplots()
+    ax.plot(t1_array, np.sum(p_array, axis=-1))
+#     ax.plot(t1_array, p_array[...,1], ls='--')
+#     ax.plot(t1_array, p_array[...,2], ls=':')
+    plt.show()
+
+def plot_polarizations():
     np.set_printoptions(linewidth=750)
     
     params_dict = {'t1':0.99, 
@@ -156,3 +192,6 @@ if __name__ == "__main__":
     fig, ax = plt.subplots()
     ax.plot(t1_array, p_array)
     plt.show()
+
+if __name__ == "__main__":
+    compare_polarizations()
