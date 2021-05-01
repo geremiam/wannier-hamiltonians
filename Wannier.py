@@ -6,75 +6,15 @@ from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 from matplotlib import cm
 
-def smartprint(string, val, nl=False):
-    if nl:
-        print(string + ' =\n{}'.format(val))
-    else:
-        print(string + ' = {}'.format(val))
-
-def stackedidentity_like(a):
-    a_shape = a.shape
-    assert a_shape[-1]==a_shape[-2], 'Last two dimensions were expected to be equal in length, but are not.'
-    
-    output = np.zeros_like(a)
-    # Weird advanced indexing stuff
-    # https://stackoverflow.com/questions/59897165/create-identity-matrices-with-arbitrary-shape-with-numpy
-    I = np.arange(a_shape[-1])
-    output[...,I,I] = 1
-    
-    return output
-
-def eigvalsu(a, atol=1.e-13, shift_branch=False):
-    ''' Eigenvalues of a unitary matrix in the form of a phase.
-    The eigenvalues of a unitary matrix are all on the unit circle. This functions the 
-    eigenvalue phases theta, where e^{i theta}, with the principle branch and in 
-    ascending order. '''
-    # Check that matrix is unitary.
-    deviation = np.amax(np.abs(a @ np.conj(np.swapaxes(a, -1, -2)) - stackedidentity_like(a)))
-    isunitary = deviation < atol
-    assert isunitary, 'Argument of eigvalsu() was expected to be unitary, but is not. Largest deviation is {}.'.format(deviation)
-    
-    evals = np.linalg.eigvals(a) # Evaluate eigenvalues
-    
-    phases = np.log(evals) / 1j # Get argument of exponential
-    
-    if shift_branch:
-        phases += 2.*pi*(np.real(phases)<0.)
-    
-    # Check that imaginary parts are zero
-    phases_maximag = np.amax(np.abs(np.imag(phases)))
-    assert phases_maximag < atol, 'Phases have large imaginary parts: phases_maximag = {}'.format(phases_maximag)
-    
-    phases = np.real(phases) # Keep only real part
-    
-    # Use energies to get sorted indices
-    sorted_inds = np.argsort(phases, axis=-1)
-    
-    # Use the sorted indices to sort evals and evecs
-    phases = np.take_along_axis(phases, sorted_inds,         axis=-1)
-    #T        = np.take_along_axis(T,        sorted_inds[None,:], axis=-1)
-    
-    return phases
-
-def polardecomp(mat):
-    ''' A broadcasting polar decomposition using SVD. Returns U and P s.t. mat = U @ P.'''
-    
-    # Decomposition mat = (u * s[...,None,:]) @ vh
-    u, s, vh = np.linalg.svd(mat)
-    v = np.conj(np.swapaxes(vh, -1, -2))
-    
-    # Get polar decomposition from SVD
-    P = (v * s[...,None,:]) @ vh
-    U = u @ vh
-    
-    return U, P
+import misc as m
 
 def hamBBH(k, params_dict):
     ''' Return the Bloch hamiltonian. Broadcasts in k. 
     First dimension of k are the kx,ky components.
     '''
     # Unpack arguments
-    gamma = params_dict['gamma']
+    gamma_x = params_dict['gamma_x']
+    gamma_y = params_dict['gamma_y']
     lambd = params_dict['lambd']
     delta = params_dict['delta']
     
@@ -102,35 +42,15 @@ def hamBBH(k, params_dict):
     mat = np.zeros(k_shape + (4,4), complex)
     
     # x-direction terms
-    mat += gamma * Gamma4 
+    mat += gamma_x * Gamma4 
     mat += lambd * ( cos(Kx) * Gamma4 + sin(Kx) * Gamma3 )
     # y-direction terms
-    mat += gamma * Gamma2
+    mat += gamma_y * Gamma2
     mat += lambd * ( cos(Ky) * Gamma2 + sin(Ky) * Gamma1 )
     # On-site mass term
     mat += delta * Gamma0
     
     return mat
-
-def Wilson_line_elements2D(evecs_occ, unitary=True):
-    ''' Calculate Wilson line elements between adjacent momentum points using evecs_occ. '''
-    
-    assert len(evecs_occ.shape)==4
-    
-    T = evecs_occ
-    Tdagger = np.conj(np.swapaxes(evecs_occ, -1, -2))
-    
-    Fx = np.roll(Tdagger, -1, 0) @ T
-    Fy = np.roll(Tdagger, -1, 1) @ T
-    
-    if unitary:
-        Ux, Px = polardecomp(Fx)
-        Fx = Ux
-        
-        Uy, Py = polardecomp(Fy)
-        Fy = Uy
-    
-    return np.array([Fx, Fy])
 
 def Wilson_line_elements(evecs_occ, unitary=True, verbose=True):
     ''' Calculate Wilson line elements between adjacent momentum points using evecs_occ. '''
@@ -141,8 +61,8 @@ def Wilson_line_elements(evecs_occ, unitary=True, verbose=True):
     D = len(k_shape)
     
     if verbose:
-        smartprint('Nocc',Nocc)
-        smartprint('D',D)
+        m.sprint('Nocc',Nocc)
+        m.sprint('D',D)
     
     # Create return array
     F = np.zeros((D,) + k_shape + (Nocc,Nocc), complex)
@@ -155,7 +75,7 @@ def Wilson_line_elements(evecs_occ, unitary=True, verbose=True):
         F_temp = np.roll(Tdagger, -1, d) @ T
         
         if unitary:
-            U_temp, P_temp = polardecomp(F_temp)
+            U_temp, P_temp = m.polardecomp(F_temp)
             F_temp = U_temp
         
         F[d,...] = F_temp
@@ -179,7 +99,7 @@ def Wilson_loop_directional(Fdirectional, axis, basepoint, atol=1.e-13):
         Wdirectional = np.take(Fdirectional, i, axis=axis) @ Wdirectional # Left-multiply throughout entire axis
     
     # Check that W matrices are unitary
-    deviation = np.amax(np.abs(Wdirectional @ np.conj(np.swapaxes(Wdirectional, -1, -2)) - stackedidentity_like(Wdirectional)))
+    deviation = np.amax(np.abs(Wdirectional @ np.conj(np.swapaxes(Wdirectional, -1, -2)) - m.stackedidentity_like(Wdirectional)))
     isunitary = deviation < atol
     if not isunitary:
         print('WARNING: Wilson_loop_directional did not ouput a unitary matrix. Largest deviation is {}.'.format(deviation))
@@ -248,7 +168,8 @@ def Wilson_loops(F, basepoints):
 #     return centers
 
 def plot_bandstructure():
-    params_dict = {'gamma':0.5, 
+    params_dict = {'gamma_x':0.5, 
+                   'gamma_y':0.5, 
                    'lambd':1., 
                    'delta':0.}
     
@@ -256,12 +177,12 @@ def plot_bandstructure():
     kx = np.linspace(0., 2.*pi, Nx, endpoint=False)
     ky = np.linspace(0., 2.*pi, Ny, endpoint=False)
     k = np.array( np.meshgrid(kx, ky, indexing='ij') )
-    smartprint('k.shape', k.shape)
+    m.sprint('k.shape', k.shape)
     
     H_array = hamBBH(k, params_dict)
-    smartprint('H_array.shape', H_array.shape)
+    m.sprint('H_array.shape', H_array.shape)
     evals = np.linalg.eigvalsh(H_array)
-    smartprint('evals.shape', evals.shape)
+    m.sprint('evals.shape', evals.shape)
     
     fig = plt.figure()
     ax = fig.gca(projection='3d')
@@ -271,7 +192,8 @@ def plot_bandstructure():
     plt.show()
 
 def calculation_Wilsonloops():
-    params_dict = {'gamma':1.1, 
+    params_dict = {'gamma_x':0.5, 
+                   'gamma_y':1.5, 
                    'lambd':1., 
                    'delta':0.}
     
@@ -279,31 +201,31 @@ def calculation_Wilsonloops():
     kx = np.linspace(-pi, pi, Nx, endpoint=False)
     ky = np.linspace(-pi, pi, Ny, endpoint=False)
     k = np.array( np.meshgrid(kx, ky, indexing='ij') )
-    smartprint('k.shape', k.shape)
+    m.sprint('k.shape', k.shape)
     
     H_array = hamBBH(k, params_dict)
-    smartprint('H_array.shape', H_array.shape)
+    m.sprint('H_array.shape', H_array.shape)
     evals, evecs = np.linalg.eigh(H_array)
     
     filled_bands = [0,1]
-    smartprint('filled_bands',filled_bands)
+    m.sprint('filled_bands',filled_bands)
     evecs_occ = evecs[...,filled_bands]
     
     F = Wilson_line_elements(evecs_occ, unitary=True)
-    smartprint('F.shape', F.shape)
+    m.sprint('F.shape', F.shape)
     
     basepoints = [0,0]
     Wilsonloops_list = Wilson_loops(F, basepoints)
     
     Wx = Wilsonloops_list[0]
-    smartprint('Wx.shape',Wx.shape)
-    Wannierbands_x = eigvalsu(Wx, shift_branch=True) / (2.*pi)
-    smartprint('Wannierbands_x.shape',Wannierbands_x.shape)
+    m.sprint('Wx.shape',Wx.shape)
+    Wannierbands_x = m.eigvalsu(Wx, shift_branch=True) / (2.*pi)
+    m.sprint('Wannierbands_x.shape',Wannierbands_x.shape)
     
     Wy = Wilsonloops_list[1]
-    smartprint('Wy.shape',Wy.shape)
-    Wannierbands_y = eigvalsu(Wy, shift_branch=True) / (2.*pi)
-    smartprint('Wannierbands_y.shape',Wannierbands_y.shape)
+    m.sprint('Wy.shape',Wy.shape)
+    Wannierbands_y = m.eigvalsu(Wy, shift_branch=True) / (2.*pi)
+    m.sprint('Wannierbands_y.shape',Wannierbands_y.shape)
     
     fig, ax = plt.subplots(1,2)
     ax[0].plot(ky, Wannierbands_x)
@@ -320,4 +242,4 @@ def calculation_Wilsonloops():
 if __name__ == "__main__":
     np.set_printoptions(linewidth=750)
     
-    calculation_Wilsonloops()
+    plot_bandstructure()
