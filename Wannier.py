@@ -144,29 +144,6 @@ def Wilson_loops(F, basepoints):
 #     
 #     return ret
 
-# def Wannier_centers(hamfunc, params_dict, filled_bands, N):
-#     
-#     k = np.linspace(0., 2.*pi, N, endpoint=False)
-#     ham = hamfunc(k, params_dict)
-#     
-#     evals, evecs = np.linalg.eigh(ham)
-#     
-#     evecs_occ = evecs[...,filled_bands]
-#     
-#     F = Wilson_line_elements(evecs_occ, unitary=True)
-#     
-#     basepoint = 0
-#     W = Wilson_loop(F, basepoint)
-#     
-#     centers = np.log(np.linalg.eigvals(W)) / (2.j*pi)
-#     
-#     if np.abs(np.amax(np.imag(centers)))>1.e-14:
-#         print('WARNING: centers have large imaginary part. centers = {}'.format(centers))
-#     else:
-#         centers = np.real(centers)
-#     
-#     return centers
-
 def plot_bandstructure():
     params_dict = {'gamma_x':0.5, 
                    'gamma_y':0.5, 
