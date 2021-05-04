@@ -72,7 +72,7 @@ def Wilson_line_elements(evecs_occ, unitary=True, verbose=True):
     Tdagger = np.conj(np.swapaxes(evecs_occ, -1, -2))
     
     for d in range(D):
-        F_temp = np.roll(Tdagger, -1, d) @ T
+        F_temp = np.roll(Tdagger, -1, axis=d) @ T
         
         if unitary:
             U_temp, P_temp = m.polardecomp(F_temp)
@@ -84,37 +84,86 @@ def Wilson_line_elements(evecs_occ, unitary=True, verbose=True):
 
 def Wilson_loop_directional(Fdirectional, axis, basepoint, atol=1.e-13):
     ''' Calculates the (large) Wilson loop, starting from the index "basepoint". Last two
-    dimensions of "F" are matrix dimensions, others are momentum axes. 
+    dimensions of "Fdirectional" are matrix dimensions, others are momentum axes. "axis" 
+    specifies direction of the Wilson line elements in "Fdirectional".
     Output W has one less momentum axis.
     '''
     
     axis_len = Fdirectional.shape[axis] # Get length of axis to multiply over
     
-    # Roll the basepoint to the start of the array for convenience
-    Fdirectional = np.roll(Fdirectional, -basepoint, axis)
+    if basepoint=='all': # In this case, every possible basepoint is calculated
+        
+        Wlist = [] # List to temporarily store the W's for the different basepoints in the "axis" direction
+        
+        axis_indices = np.arange(axis_len) # Array of indices along the "axis" direction
+        
+        # Loop over indices in "axis" direction, taking them as a basepoint one by one
+        for bpoint_loc in axis_indices:
+            # Reordered array of indices, starting with "bpoint_loc"
+            axis_indices_reordered = np.roll(axis_indices, -bpoint_loc)
+            
+            # Define initial value of W
+            Wdir_temp = np.take(Fdirectional, axis_indices_reordered[0], axis=axis)
+            
+            for i in axis_indices_reordered[1:]: # START LOOP AT SECOND VALUE
+                Wdir_temp = np.take(Fdirectional, i, axis=axis) @ Wdir_temp # Left-multiply throughout entire axis
+            
+            Wlist.append(Wdir_temp) # Append the value for the current basepoint to the list
+        
+        Wdirectional = np.stack(Wlist, axis=axis) # Turn the list into properly stacked array
     
-    Wdirectional = np.take(Fdirectional, 0, axis=axis) # Define initial value of W
-    
-    for i in range(1,axis_len): # START LOOP AT SECOND VALUE
-        Wdirectional = np.take(Fdirectional, i, axis=axis) @ Wdirectional # Left-multiply throughout entire axis
-    
-    # Check that W matrices are unitary
-    deviation = np.amax(np.abs(Wdirectional @ np.conj(np.swapaxes(Wdirectional, -1, -2)) - m.stackedidentity_like(Wdirectional)))
-    isunitary = deviation < atol
-    if not isunitary:
-        print('WARNING: Wilson_loop_directional did not ouput a unitary matrix. Largest deviation is {}.'.format(deviation))
+    else:
+        
+        # Roll the basepoint to the start of the array for convenience
+        Fdirectional = np.roll(Fdirectional, -basepoint, axis=axis)
+        
+        Wdirectional = np.take(Fdirectional, 0, axis=axis) # Define initial value of W
+        
+        for i in range(1,axis_len): # START LOOP AT SECOND VALUE
+            Wdirectional = np.take(Fdirectional, i, axis=axis) @ Wdirectional # Left-multiply throughout entire axis
+        
+        # Check that W matrices are unitary
+        deviation = np.amax(np.abs(Wdirectional @ np.conj(np.swapaxes(Wdirectional, -1, -2)) - m.stackedidentity_like(Wdirectional)))
+        isunitary = deviation < atol
+        if not isunitary:
+            print('WARNING: Wilson_loop_directional did not ouput a unitary matrix. Largest deviation is {}.'.format(deviation))
     
     return Wdirectional
 
 def Wilson_loops(F, basepoints):
     
-    Wilsonloops_list = []
+    if basepoints=='all':
+        Wilsonloops_list = []
+        
+        for idx_axis, Fdirectional in enumerate(F):
+            W = Wilson_loop_directional(Fdirectional, idx_axis, 'all')
+            Wilsonloops_list.append(W)
+        
+        retval = np.array( Wilsonloops_list )
     
-    for idx_axis, Fdirectional in enumerate(F):
-        W = Wilson_loop_directional(Fdirectional, idx_axis, basepoints[idx_axis])
-        Wilsonloops_list.append(W)
+    else:
+        Wilsonloops_list = []
+        
+        for idx_axis, Fdirectional in enumerate(F):
+            W = Wilson_loop_directional(Fdirectional, idx_axis, basepoints[idx_axis])
+            Wilsonloops_list.append(W)
+        
+        retval = Wilsonloops_list
     
-    return Wilsonloops_list
+    return retval
+
+def Wannier_states(evecs_occ, Wilsonloops):
+    
+    phases, evecs_Wil = m.eigu(Wilsonloops)
+    m.sprint('phases.shape', phases.shape)
+    m.sprint('evecs_occ.shape', evecs_occ.shape)
+    m.sprint('evecs_Wil.shape', evecs_Wil.shape)
+    
+    # Perform sum-product over band index n (filled bands only)
+    Wannierstates = np.sum( evecs_occ[...,None]*evecs_Wil[...,None,:,:], axis=-2 )
+    m.sprint('Wannierstates.shape', Wannierstates.shape)
+    
+    return Wannierstates
 
 # def compute_pol(hamfunc, params_dict, filled_bands, N, ret_evals=False):
 #     
@@ -219,4 +268,37 @@ def calculation_Wilsonloops():
 if __name__ == "__main__":
     np.set_printoptions(linewidth=750)
     
-    plot_bandstructure()
+    params_dict = {'gamma_x':0.5, 
+                   'gamma_y':1., 
+                   'lambd':1., 
+                   'delta':0.}
+    
+    Nx, Ny = 10, 12
+    kx = np.linspace(-pi, pi, Nx, endpoint=False)
+    ky = np.linspace(-pi, pi, Ny, endpoint=False)
+    k = np.array( np.meshgrid(kx, ky, indexing='ij') )
+    m.sprint('k.shape', k.shape)
+    
+    H_array = hamBBH(k, params_dict)
+    m.sprint('H_array.shape', H_array.shape)
+    evals, evecs = np.linalg.eigh(H_array)
+    
+    filled_bands = [0,1]
+    m.sprint('filled_bands',filled_bands)
+    evecs_occ = evecs[...,filled_bands]
+    
+    F = Wilson_line_elements(evecs_occ, unitary=True)
+    m.sprint('F.shape', F.shape)
+    
+    Wilsonloops = Wilson_loops(F, 'all')
+    m.sprint('Wilsonloops.shape', Wilsonloops.shape)
+    
+    Wannierstates = Wannier_states(evecs_occ, Wilsonloops)
+    
+    
+    Wannier_sector = [0]
+    m.sprint('Wannier_sector',Wannier_sector)
+    Wannierstates_sector = Wannierstates[...,Wannier_sector]
+    
+    F_Wannier = Wilson_line_elements(Wannierstates_sector, unitary=True)
+
