@@ -96,12 +96,14 @@ def eigu(a, atol=1.e-13, shift_branch=False):
     
     # Check that the eigenvectors are orthonormal
     isunitary, deviation = check_unitary(evecs, atol=atol, elementwise=True)
+    nonunitary_indices = findinarray(isunitary,False)
     
-    for idx in findinarray(isunitary,False):
-        print('Eigenvectors for matrix at index {} are not orthonormal. Using Schur '
-             +'decomposition to find orthonormal eigenvectors for this matrix.'.format(idx))
-        
-        idx1 = idx + (slice(None)) # For evals
+    if nonunitary_indices!=[]:
+        print('Using Schur decomposition to find orthonormal eigenvectors for the matrices at the following indices:\n{}.'.format(nonunitary_indices))
+        print('Deviations from eigenbases being unitary are\n{}'.format(deviation[isunitary==False]))
+    
+    for idx in nonunitary_indices:        
+        idx1 = idx + (slice(None),) # For evals
         idx2 = idx + (slice(None), slice(None)) # For Hamiltonian and evecs
         
         T, Z = scipy.linalg.schur(a[idx2], output='complex')
