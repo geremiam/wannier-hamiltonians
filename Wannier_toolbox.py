@@ -154,6 +154,41 @@ def Wannier_states(evecs_occ, Wilsonloops, verbose=False):
     
     return Wannierstates
 
+def pol(W_directional, atol=1.e-14, branchtol=1.e-4, verbose=False):
+    '''
+    Takes a Wannier Hamiltonian in a given direction (with respect to any given basepoint
+    in that direction) and calculates the total polarization in that direction. Careful 
+    treatment of values near the branchcut.
+    
+    W_directional.shape = (Momentum direction except the direction of the loops) + (Nocc, Nocc)
+    '''
+    # Numpy's log uses the principal branch, but sometimes appears to return -pi
+    
+    pol_array = np.log(np.linalg.det(W_directional)) / (2.j*np.pi)
+    
+    # Check and get rid of imaginary parts
+    largest_imag_part = np.amax(np.abs(np.imag(pol_array)))
+    if largest_imag_part>atol:
+        print('WARNING: polarizations have large imaginary part. Largest is {}'.format(largest_imag_part))
+    else:
+        pol_array = np.real(pol_array)
+    
+    
+    # Shift values within a small window to positive side
+    if verbose:
+        mi.sprint('Minimum polarization found (before shift): ', np.amin(pol_array) )
+    pol_array += (pol_array<-0.5+branchtol)
+    if verbose:
+        mi.sprint('Minimum polarization found (after shift): ', np.amin(pol_array) )
+    
+    # Show the sum and the mean
+    sum = np.sum(pol_array)
+    mean = np.mean(pol_array)
+    if verbose:
+        mi.sprint('Total polarization: ', sum )
+        mi.sprint('Mean polarization: ', mean )
+    
+    return mean
 
 if __name__ == "__main__":
     pass

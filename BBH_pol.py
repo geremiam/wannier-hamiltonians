@@ -77,13 +77,13 @@ def plot_bandstructure():
         surf = ax.plot_surface(k[0], k[1], evals[...,n], cmap=cm.coolwarm, linewidth=0, antialiased=False)
     plt.show()
 
-def plot_Wannierbands():
+def plot_Wannierbands(plot=True):
     params_dict = {'gamma_x':0.5, 
                    'gamma_y':1.5, 
                    'lambd':1., 
                    'delta':0.}
     
-    Nx, Ny = 400, 400
+    Nx, Ny = 300, 400
     kx = np.linspace(-pi, pi, Nx, endpoint=False)
     ky = np.linspace(-pi, pi, Ny, endpoint=False)
     k = np.array( np.meshgrid(kx, ky, indexing='ij') )
@@ -102,27 +102,32 @@ def plot_Wannierbands():
     
     Wx = Wilsonloops_list[0]
     mi.sprint('Wx.shape',Wx.shape)
+    px = WT.pol(Wx, atol=1.e-14, branchtol=0., verbose=True)
+    mi.sprint('px', px)
     Wannierbands_x = mi.eigvalsu(Wx, shift_branch=True) / (2.*pi)
     mi.sprint('Wannierbands_x.shape',Wannierbands_x.shape)
     
     Wy = Wilsonloops_list[1]
     mi.sprint('Wy.shape',Wy.shape)
+    py = WT.pol(Wy, atol=1.e-14, branchtol=0., verbose=True)
+    mi.sprint('py', py)
     Wannierbands_y = mi.eigvalsu(Wy, shift_branch=True) / (2.*pi)
     mi.sprint('Wannierbands_y.shape',Wannierbands_y.shape)
     
-    fig, ax = plt.subplots(1,2)
-    ax[0].plot(ky, Wannierbands_x)
-    ax[0].set_xlabel(r'$k_y$')
-    ax[1].plot(kx, Wannierbands_y)
-    ax[1].set_xlabel(r'$k_x$')
-    for axis in ax.flatten():
-        axis.axhline(0, color='C7')
-        axis.axhline(1, color='C7')
-    plt.show()
+    if plot:
+        fig, ax = plt.subplots(1,2)
+        ax[0].plot(ky, Wannierbands_x)
+        ax[0].set_xlabel(r'$k_y$')
+        ax[1].plot(kx, Wannierbands_y)
+        ax[1].set_xlabel(r'$k_x$')
+        for axis in ax.flatten():
+            axis.axhline(0, color='C7')
+            axis.axhline(1, color='C7')
+        plt.show()
     
     return
 
-def tests():
+def calculate_Wannierpol():
     np.set_printoptions(linewidth=750)
     
     params_dict = {'gamma_x':0.99, 
@@ -131,7 +136,7 @@ def tests():
                    'delta':0.}
     mi.sprint('params_dict',params_dict)
     
-    Nx, Ny = 40, 45
+    Nx, Ny = 100, 150
     kx = np.linspace(-pi, pi, Nx, endpoint=False)
     ky = np.linspace(-pi, pi, Ny, endpoint=False)
     k = np.array( np.meshgrid(kx, ky, indexing='ij') )
@@ -165,46 +170,15 @@ def tests():
     mi.sprint('W_yx.shape',W_yx.shape)
     
     
-    arr1 = np.log(np.linalg.det(W_xy)) / (2.j*pi)
-    arr1 += (arr1<-0.49)
-    mi.sprint('arr1', arr1)
+    verbose = False
+    p_xy = WT.pol(W_xy, atol=1.e-14, branchtol=1.e-8, verbose=verbose)
+    mi.sprint('p_xy',p_xy)
     
-    arr2 = np.log(np.linalg.det(W_yx)) / (2.j*pi)
-    arr2 += (arr2<-0.49)
-    mi.sprint('arr2', arr2)
-    
-    print( np.mean(arr1) )
-    print( np.mean(arr2) )
+    p_yx = WT.pol(W_yx, atol=1.e-14, branchtol=1.e-8, verbose=verbose)
+    mi.sprint('p_yx',p_yx)
     
     return
 
-# def compute_pol(hamfunc, params_dict, filled_bands, N, ret_evals=False):
-#     
-#     k = np.linspace(0., 2.*pi, N, endpoint=False)
-#     ham = hamfunc(k, params_dict)
-#     
-#     evals, evecs = np.linalg.eigh(ham)
-#     
-#     evecs_occ = evecs[...,filled_bands]
-#     
-#     F = Wilson_line_elements(evecs_occ, unitary=True)
-#     
-#     basepoint = 0
-#     W = Wilson_loop(F, basepoint)
-#     
-#     p = np.log(np.linalg.det(W)) / (2.j*pi)
-#     
-#     if np.abs(np.imag(p))>1.e-14:
-#         print('WARNING: polarization has large imaginary part. p = {}'.format(p))
-#     else:
-#         p = np.real(p)
-#     
-#     if ret_evals:
-#         ret = p, k, evals
-#     else:
-#         ret = p
-#     
-#     return ret
 
 if __name__ == "__main__":
-    tests()
+    calculate_Wannierpol()
