@@ -1,3 +1,7 @@
+'''
+Driver file for computing the Wannier Hamiltonians and Wannier polarizations for the BBH 
+model. The model is defined here and the tools from the module Wannier_toolbox are used.
+'''
 import numpy as np
 from numpy import sin, cos, pi
 import scipy.linalg

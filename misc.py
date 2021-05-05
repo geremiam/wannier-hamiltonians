@@ -1,3 +1,6 @@
+'''
+Variety of mathematical or non-mathematical tools
+'''
 import numpy as np
 import scipy.linalg
 
@@ -169,5 +172,4 @@ if __name__ == "__main__":
     U = np.array([[U1,U2],[U3,U4]])
     
     phases, evecs = eigu(U)
-    
     

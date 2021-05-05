@@ -1,3 +1,6 @@
+'''
+Standalone file for computing polarizations of 1D (band-insulator) Bloch Hamiltonians
+'''
 import numpy as np
 import scipy.linalg
 import matplotlib.pyplot as plt

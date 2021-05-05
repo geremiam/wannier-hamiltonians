@@ -1,3 +1,6 @@
+'''
+Functions for computing Wilson loops, Wannier Hamiltonians and related quantities
+'''
 import numpy as np
 import misc as mi
 
