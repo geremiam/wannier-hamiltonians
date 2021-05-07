@@ -179,10 +179,10 @@ def pol(W_directional, atol=1.e-14, branchtol=1.e-4, verbose=False):
     
     # Shift values within a small window to positive side
     if verbose:
-        mi.sprint('Minimum polarization found (before shift): ', np.amin(pol_array) )
+        print('Minimum and maximum polarizations (before shift): {}\t{}'.format(np.amin(pol_array), np.amax(pol_array)) )
     pol_array += (pol_array<-0.5+branchtol)
     if verbose:
-        mi.sprint('Minimum polarization found (after shift): ', np.amin(pol_array) )
+        print('Minimum and maximum polarizations (after shift): {}\t{}'.format(np.amin(pol_array), np.amax(pol_array)) )
     
     # Show the sum and the mean
     sum = np.sum(pol_array)

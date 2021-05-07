@@ -59,7 +59,7 @@ def hamBBH(k, params_dict):
 
 def plot_bandstructure():
     params_dict = {'gamma_x':0.5, 
-                   'gamma_y':0.5, 
+                   'gamma_y':1.5, 
                    'lambd':1., 
                    'delta':0.}
     
@@ -134,8 +134,8 @@ def plot_Wannierbands(plot=True):
 def calculate_Wannierpol():
     np.set_printoptions(linewidth=750)
     
-    params_dict = {'gamma_x':0.99, 
-                   'gamma_y':1.01, 
+    params_dict = {'gamma_x':0.5, 
+                   'gamma_y':1.5, 
                    'lambd':1., 
                    'delta':0.}
     mi.sprint('params_dict',params_dict)
@@ -174,7 +174,7 @@ def calculate_Wannierpol():
     mi.sprint('W_yx.shape',W_yx.shape)
     
     
-    verbose = False
+    verbose = True
     p_xy = WT.pol(W_xy, atol=1.e-14, branchtol=1.e-8, verbose=verbose)
     mi.sprint('p_xy',p_xy)
     
@@ -185,4 +185,8 @@ def calculate_Wannierpol():
 
 
 if __name__ == "__main__":
+    plot_bandstructure()
+    print()
+    plot_Wannierbands()
+    print()
     calculate_Wannierpol()
