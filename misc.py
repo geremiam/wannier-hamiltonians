@@ -143,6 +143,45 @@ def eigu(a, atol=1.e-13, shift_branch=False):
     
     return phases, evecs
 
+def paraunitary_diag_evecs(hamiltonian, tau3, verbose=False):
+    ''' No broadcasting. Uses Cholesky decomposition approach to get paraunitary 
+    transformation. Only works if 'hamiltonian' is positive definite. '''
+    
+    assert np.allclose(hamiltonian, hamiltonian.T.conj(), rtol=1e-05, atol=1e-08), 'The hamiltonian should be Hermitian, but is not.'
+    assert np.all(np.linalg.eigvalsh(hamiltonian)>0.), 'Error: matrix is not positive-definite: evals = {}'.format(np.linalg.eigvalsh(hamiltonian))
+    
+    K_ct = np.linalg.cholesky(hamiltonian) # Convention is contrary to that in paper
+    K    = K_ct.conj().T
+    W = K @ tau3 @ K_ct
+    
+    # Energies are the same as the eigenvalues of tau3 @ hamiltonian
+    energies, W_evecs = np.linalg.eigh(W) # eigh gives orthonormal eigenvectors
+    
+    assert (hamiltonian.shape[-1]%2==0), 'Dimension of Hamiltonian is expected to be even, but is not.'
+    n = hamiltonian.shape[-1] // 2 # Get (half-)size of hamiltonian
+    
+    assert np.all(energies[..., :n] < 0.), 'Expected the first half of the energies to be negative; was not.'
+    assert np.all(energies[..., n:] > 0.), 'Expected the second half of the energies to be positive; was not.'
+    
+    T = np.linalg.solve(K, W_evecs * np.sqrt(np.abs(energies))[...,None,:])
+    
+    assert np.allclose(tau3 @ hamiltonian @ T, T @ np.diag(energies), rtol=1e-05, atol=1e-08), 'Eigendecomposition is incorrect. (A)'
+    
+    # Energies are purely real because 'hamiltonian' is positive definite
+    energies = np.real(energies)
+    
+    # Use energies to get sorted indices
+    sorted_inds = np.argsort(energies, axis=-1)
+    if verbose: mt.smartprint('sorted_inds',sorted_inds)
+    
+    # Use the sorted indices to sort evals and evecs
+    energies = np.take_along_axis(energies, sorted_inds,         axis=-1)
+    T        = np.take_along_axis(T,        sorted_inds[None,:], axis=-1)
+    
+    assert np.allclose(tau3 @ hamiltonian @ T, T @ np.diag(energies), rtol=1e-05, atol=1e-08), 'Eigendecomposition is incorrect. (B)'
+    
+    return energies, T
+
 def polardecomp(mat):
     ''' A broadcasting polar decomposition using SVD. Returns U and P s.t. mat = U @ P.'''
     
