@@ -30,6 +30,20 @@ def stackedidentity_like(a):
     
     return output
 
+def generate_posdef(n, verbose=False):
+  rng = np.random.default_rng()
+  L = rng.uniform(low=-1., high=1., size=(n,n)) + 1.j*rng.uniform(low=-1., high=1., size=(n,n))
+  
+  posdef = L @ L.T.conj()
+  
+  if verbose:
+      print('det(posdef) = {}'.format(np.linalg.det(posdef)))
+      print('eigvalsh(posdef) = {}'.format(np.linalg.eigvalsh(posdef)))
+  
+  assert np.all(np.linalg.eigvalsh(posdef)>0.), 'Error: matrix is not positive-definite: evals = {}'.format(np.linalg.eigvalsh(posdef))
+  
+  return posdef
+
 def check_unitary(a, atol=1.e-13, elementwise=False):
     ''' Check that matrix is unitary. '''
     
@@ -144,14 +158,15 @@ def eigu(a, atol=1.e-13, shift_branch=False):
     return phases, evecs
 
 def paraunitary_diag_evecs(hamiltonian, tau3, verbose=False):
-    ''' No broadcasting. Uses Cholesky decomposition approach to get paraunitary 
-    transformation. Only works if 'hamiltonian' is positive definite. '''
+    ''' Uses Cholesky decomposition approach to get paraunitary 
+    transformation. Only works if 'hamiltonian' is positive definite. Energies (and 
+    states) are ordered from lowest to highest. '''
     
-    assert np.allclose(hamiltonian, hamiltonian.T.conj(), rtol=1e-05, atol=1e-08), 'The hamiltonian should be Hermitian, but is not.'
+    assert np.allclose(hamiltonian, np.swapaxes(hamiltonian.conj(),-1,-2), rtol=1e-05, atol=1e-08), 'The hamiltonian should be Hermitian, but is not.'
     assert np.all(np.linalg.eigvalsh(hamiltonian)>0.), 'Error: matrix is not positive-definite: evals = {}'.format(np.linalg.eigvalsh(hamiltonian))
     
     K_ct = np.linalg.cholesky(hamiltonian) # Convention is contrary to that in paper
-    K    = K_ct.conj().T
+    K    = np.swapaxes( np.conj(K_ct), -1, -2 )
     W = K @ tau3 @ K_ct
     
     # Energies are the same as the eigenvalues of tau3 @ hamiltonian
@@ -165,7 +180,7 @@ def paraunitary_diag_evecs(hamiltonian, tau3, verbose=False):
     
     T = np.linalg.solve(K, W_evecs * np.sqrt(np.abs(energies))[...,None,:])
     
-    assert np.allclose(tau3 @ hamiltonian @ T, T @ np.diag(energies), rtol=1e-05, atol=1e-08), 'Eigendecomposition is incorrect. (A)'
+    assert np.allclose(tau3 @ hamiltonian @ T, T * energies[...,None,:], rtol=1e-05, atol=1e-08), 'Eigendecomposition is incorrect. (A)'
     
     # Energies are purely real because 'hamiltonian' is positive definite
     energies = np.real(energies)
@@ -175,10 +190,10 @@ def paraunitary_diag_evecs(hamiltonian, tau3, verbose=False):
     if verbose: mt.smartprint('sorted_inds',sorted_inds)
     
     # Use the sorted indices to sort evals and evecs
-    energies = np.take_along_axis(energies, sorted_inds,         axis=-1)
-    T        = np.take_along_axis(T,        sorted_inds[None,:], axis=-1)
+    energies = np.take_along_axis(energies, sorted_inds,             axis=-1)
+    T        = np.take_along_axis(T,        sorted_inds[...,None,:], axis=-1)
     
-    assert np.allclose(tau3 @ hamiltonian @ T, T @ np.diag(energies), rtol=1e-05, atol=1e-08), 'Eigendecomposition is incorrect. (B)'
+    assert np.allclose(tau3 @ hamiltonian @ T, T * energies[...,None,:], rtol=1e-05, atol=1e-08), 'Eigendecomposition is incorrect. (B)'
     
     return energies, T
 
@@ -198,17 +213,24 @@ def polardecomp(mat):
 if __name__ == "__main__":
     np.set_printoptions(linewidth=750)
     
-    a1 = np.reshape(np.arange(4*4),(4,4))*np.array([1,1,1,1]) - 0.2j*np.reshape(np.arange(4*4),(4,4))
-    a2 = np.reshape(np.arange(4*4),(4,4))*np.array([1,1,1,-1]) - 0.2j*np.reshape(np.arange(4*4),(4,4))
-    a3 = np.reshape(np.arange(4*4),(4,4))*np.array([1,1,-1,-1]) - 0.2j*np.reshape(np.arange(4*4),(4,4))
-    a4 = np.reshape(np.arange(4*4),(4,4))*np.array([1,-1,-1,-1]) - 0.2j*np.reshape(np.arange(4*4),(4,4))
+    n = 2
+    N1 = 3
+    N2 = 5
     
-    U1, P1 = polardecomp(a1)
-    U2, P2 = polardecomp(a2)
-    U3, P3 = polardecomp(a3)
-    U4, P4 = polardecomp(a4)
+    mat = np.zeros([N1,N2,2*n,2*n], complex)
     
-    U = np.array([[U1,U2],[U3,U4]])
+    for i1 in range(N1):
+      for i2 in range(N2):
+        mat[i1,i2,:,:] = generate_posdef(2*n)
     
-    phases, evecs = eigu(U)
+    sprint('mat.shape', mat.shape)
+    sprint('evals', np.linalg.eigvalsh(mat))
     
+    tau3 = np.kron(np.array([[-1.,0.],[0.,1.]]), np.eye(n))
+    sprint('tau3',tau3)
+    
+    energies, T = paraunitary_diag_evecs(mat, tau3)
+    
+    sprint('energies', energies)
+    
+    print(np.amax(np.abs(np.swapaxes(T.conj(),-1,-2) @ tau3 @ T - tau3)))
