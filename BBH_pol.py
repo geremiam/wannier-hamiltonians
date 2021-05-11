@@ -4,7 +4,6 @@ model. The model is defined here and the tools from the module Wannier_toolbox a
 '''
 import numpy as np
 from numpy import sin, cos, pi
-import scipy.linalg
 
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt

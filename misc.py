@@ -4,6 +4,34 @@ Variety of mathematical or non-mathematical tools
 import numpy as np
 import scipy.linalg
 
+def savearray(f, x):
+    ''' Saves a multidimensional numpy array "x" to a file "f". '''
+    if len(x.shape)==0:
+        np.savetxt(f, x)
+    elif len(x.shape)==1:
+        np.savetxt(f, np.array([x]))
+    elif len(x.shape)==2:
+        np.savetxt(f, x)
+    else:
+        xshape = x.shape
+        # Array with the same shape as x, but without the last two dimensions. 
+        # Only used to iterate over
+        aux_array = np.zeros(xshape[:-2])
+        
+        previndex = tuple(np.zeros(len(aux_array.shape), int)) # Zero tuple of correct length
+        
+        for index, val in np.ndenumerate(aux_array):
+            diff = np.array(index, int) - np.array(previndex,int) # Incrementation in index
+            Nnewlines = np.sum(diff!=0)
+            for i in range(Nnewlines):
+                f.write('\n')
+            
+            fullindex = index + (slice(None),slice(None)) # Tuple for slicing x
+            np.savetxt(f, x[fullindex]) # Write 2*2 slice of x to file
+            
+            previndex = index
+    return
+
 def findinarray(arr,val):
     ''' Finds all instances of "val" in a numpy array, returning a list of indices at 
     which it occurs. Only works for values that have exact representation. '''
@@ -43,6 +71,14 @@ def generate_posdef(n, verbose=False):
   assert np.all(np.linalg.eigvalsh(posdef)>0.), 'Error: matrix is not positive-definite: evals = {}'.format(np.linalg.eigvalsh(posdef))
   
   return posdef
+
+def KP(list):
+    ''' Performs a Kronecker product of the arrays in "list". '''
+    output = np.kron(list[0], list[1])
+    for arr in list[2:]:
+        output = np.kron(output, arr)
+    
+    return output
 
 def check_unitary(a, atol=1.e-13, elementwise=False):
     ''' Check that matrix is unitary. '''
