@@ -193,13 +193,44 @@ def eigu(a, atol=1.e-13, shift_branch=False):
     
     return phases, evecs
 
-def paraunitary_diag_evecs(hamiltonian, tau3, verbose=False):
+def eigvals_paraunitary(hamiltonian, tau3, verbose=False):
+    ''' Uses Cholesky decomposition approach to get paraunitary energies. Only works if 
+    'hamiltonian' is positive definite. Energies are ordered from lowest to highest. '''
+    
+    assert np.allclose(hamiltonian, np.swapaxes(hamiltonian.conj(),-1,-2), rtol=1e-05, atol=1e-08), 'The hamiltonian should be Hermitian, but is not.'
+    assert np.all(np.linalg.eigvalsh(hamiltonian)>0.), 'Error: matrix is not positive-definite: evals = {}'.format(np.linalg.eigvalsh(hamiltonian))
+    
+    K_ct = np.linalg.cholesky(hamiltonian) # Convention is contrary to that in paper
+    K    = np.swapaxes( np.conj(K_ct), -1, -2 )
+    W = K @ tau3 @ K_ct
+    
+    # Energies are the same as the eigenvalues of tau3 @ hamiltonian
+    energies = np.linalg.eigvalsh(W) # eigh gives orthonormal eigenvectors
+    
+    assert (hamiltonian.shape[-1]%2==0), 'Dimension of Hamiltonian is expected to be even, but is not.'
+    n = hamiltonian.shape[-1] // 2 # Get (half-)size of hamiltonian
+    assert np.all(energies[..., :n] < 0.), 'Expected the first half of the energies to be negative; was not.'
+    assert np.all(energies[..., n:] > 0.), 'Expected the second half of the energies to be positive; was not.'
+    
+    # Energies are purely real because 'hamiltonian' is positive definite
+    energies = np.real(energies)
+    
+    # Use energies to get sorted indices
+    sorted_inds = np.argsort(energies, axis=-1)
+    if verbose: mt.smartprint('sorted_inds',sorted_inds)
+    # Use the sorted indices to sort evals and evecs
+    energies = np.take_along_axis(energies, sorted_inds, axis=-1)
+    
+    return energies
+
+def eig_paraunitary(hamiltonian, tau3, verbose=False):
     ''' Uses Cholesky decomposition approach to get paraunitary 
     transformation. Only works if 'hamiltonian' is positive definite. Energies (and 
     states) are ordered from lowest to highest. '''
     
     assert np.allclose(hamiltonian, np.swapaxes(hamiltonian.conj(),-1,-2), rtol=1e-05, atol=1e-08), 'The hamiltonian should be Hermitian, but is not.'
-    assert np.all(np.linalg.eigvalsh(hamiltonian)>0.), 'Error: matrix is not positive-definite: evals = {}'.format(np.linalg.eigvalsh(hamiltonian))
+    ham_evals = np.linalg.eigvalsh(hamiltonian)
+    assert np.all(ham_evals>0.), 'Error: matrix is not positive-definite at indices {}'.format(findinarray(ham_evals>0.,False))
     
     K_ct = np.linalg.cholesky(hamiltonian) # Convention is contrary to that in paper
     K    = np.swapaxes( np.conj(K_ct), -1, -2 )

@@ -197,4 +197,5 @@ def plot_polarizations():
     plt.show()
 
 if __name__ == "__main__":
+    np.set_printoptions(linewidth=750)
     compare_polarizations()

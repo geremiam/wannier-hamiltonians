@@ -63,8 +63,8 @@ def plot_bandstructure():
                    'delta':0.}
     
     Nx, Ny = 50, 50
-    kx = np.linspace(0., 2.*pi, Nx, endpoint=False)
-    ky = np.linspace(0., 2.*pi, Ny, endpoint=False)
+    kx = np.linspace(-pi, pi, Nx, endpoint=False)
+    ky = np.linspace(-pi, pi, Ny, endpoint=False)
     k = np.array( np.meshgrid(kx, ky, indexing='ij') )
     mi.sprint('k.shape', k.shape)
     
@@ -184,6 +184,7 @@ def calculate_Wannierpol():
 
 
 if __name__ == "__main__":
+    np.set_printoptions(linewidth=750)
     plot_bandstructure()
     print()
     plot_Wannierbands()
