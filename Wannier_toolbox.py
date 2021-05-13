@@ -6,11 +6,15 @@ import misc as mi
 
 # Internal routines #####################################################################
 
-def Wilson_line_elements(evecs_occ, unitary=True, verbose=False):
+def Wilson_line_elements(evecs_occ, metric=None, unitary=True, verbose=False):
     ''' Calculate Wilson line elements between adjacent momentum points using evecs_occ. 
     Last two dimensions of evecs_occ are orbitals and bands, previous ones are momentum
     directions. If unitary==True, the purely "unitary part" of the Wilson line elements 
     are returned.
+    
+    If "metric" is None, the usual inner product is used. If "metric" is a matrix, the 
+    inner product v^dagger @ metric @ u is calculated. For example, for paraunitary Wilson
+    lines, metric=tau3.
     '''
     
     # Last two dimensions are orbitals and bands, previous ones are momentum
@@ -30,7 +34,12 @@ def Wilson_line_elements(evecs_occ, unitary=True, verbose=False):
     Tdagger = np.conj(np.swapaxes(evecs_occ, -1, -2))
     
     for d in range(D):
-        F_temp = np.roll(Tdagger, -1, axis=d) @ T
+        if metric is None:
+            print('No metric provided. Using identity matrix.')
+            F_temp = np.roll(Tdagger, -1, axis=d) @ T
+        else:
+            print('Using the following metric: \n{}'.format(metric))
+            F_temp = np.roll(Tdagger, -1, axis=d) @ metric @ T
         
         if unitary:
             U_temp, P_temp = mi.polardecomp(F_temp)
@@ -97,7 +106,7 @@ def Wilson_loop_directional(Fdirectional, axis, basepoint, atol=1.e-13):
 
 # External routines #####################################################################
 
-def Wilson_loops(evecs_occ, basepoints):
+def Wilson_loops(evecs_occ, basepoints, metric=None):
     '''
     Returns Wilson loops in every direction from different basepoints. 
     Return is Wilsonloops.
@@ -109,7 +118,7 @@ def Wilson_loops(evecs_occ, basepoints):
         (Momentum axes except the loop direction) + (Nocc, Nocc)
     '''
     
-    F = Wilson_line_elements(evecs_occ, unitary=True, verbose=False)
+    F = Wilson_line_elements(evecs_occ, metric=metric, unitary=True, verbose=False)
     
     if basepoints=='all':
         Wilsonloops_list = []
