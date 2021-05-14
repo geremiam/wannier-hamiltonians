@@ -154,7 +154,7 @@ def Wannier_states(evecs_occ, Wilsonloops, verbose=False):
 
     '''
     
-    phases, evecs_Wil = mi.eigu(Wilsonloops)
+    phases, evecs_Wil = mi.eigu(Wilsonloops, atol=1.e-11)
     
     # Perform sum-product over band index n (filled bands only)
     Wannierstates = np.sum( evecs_occ[...,None]*evecs_Wil[...,None,:,:], axis=-2 )

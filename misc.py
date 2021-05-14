@@ -95,7 +95,7 @@ def check_unitary(a, atol=1.e-13, elementwise=False):
     
     return retval
 
-def eigvalsu(a, atol=1.e-13, shift_branch=False):
+def eigvalsu(a, atol=2.e-13, shift_branch=False):
     ''' Eigenvalues of a unitary matrix in the form of phases.
     The eigenvalues of a unitary matrix are all on the unit circle. This functions returns 
     the eigenvalue phases theta, where e^{i theta}, in ascending order. By default, the 
@@ -154,6 +154,7 @@ def eigu(a, atol=1.e-13, shift_branch=False):
     if nonunitary_indices!=[]:
         print('Using Schur decomposition to find orthonormal eigenvectors for the matrices at the following indices:\n{}.'.format(nonunitary_indices))
         print('Deviations from eigenbases being unitary are\n{}'.format(deviation[isunitary==False]))
+        print('Largest deviation is {}'.format(np.amax(deviation[isunitary==False])))
     
     for idx in nonunitary_indices:        
         idx1 = idx + (slice(None),) # For evals
