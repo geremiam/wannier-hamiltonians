@@ -124,7 +124,6 @@ def eigvalsu(a, atol=2.e-13, shift_branch=False):
     
     # Use the sorted indices to sort evals and evecs
     phases = np.take_along_axis(phases, sorted_inds,         axis=-1)
-    #T        = np.take_along_axis(T,        sorted_inds[None,:], axis=-1)
     
     return phases
 

@@ -95,9 +95,10 @@ def Wilson_loop_directional(Fdirectional, axis, basepoint, atol=1.e-13):
         
         for i in range(1,axis_len): # START LOOP AT SECOND VALUE
             Wdirectional = np.take(Fdirectional, i, axis=axis) @ Wdirectional # Left-multiply throughout entire axis
-        
-        # Check that W matrices are unitary
-        deviation = np.amax(np.abs(Wdirectional @ np.conj(np.swapaxes(Wdirectional, -1, -2)) - mi.stackedidentity_like(Wdirectional)))
+    
+    # Check that W matrices are unitary
+    for val in Wdirectional:
+        deviation = np.amax(np.abs(val @ np.conj(np.swapaxes(val, -1, -2)) - mi.stackedidentity_like(val)))
         isunitary = deviation < atol
         if not isunitary:
             print('WARNING: Wilson_loop_directional did not ouput a unitary matrix. Largest deviation is {}.'.format(deviation))
