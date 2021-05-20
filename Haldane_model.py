@@ -3,6 +3,9 @@ from numpy import sqrt, cos, sin
 import misc as mi
 import matplotlib.pyplot as plt
 
+import multiprocessing
+import joblib
+
 def find_gaps(evals):
     
     gaps_array = evals[..., 1:] - evals[..., :-1]
@@ -134,13 +137,13 @@ def check_equiv_of_hamiltonians():
 def plot_Chern_Haldane():
     params = {'t1':1., 't2':0.3, 'phi':0., 'M':0. }
     
-    N1 = 30
+    N1 = 100
     N2 = N1+1
     k1 = np.linspace(-0.5, 0.5, N1, endpoint=False)
     k2 = np.linspace(-0.5, 0.5, N2, endpoint=False)
     k = np.array(np.meshgrid(k1,k2, indexing='ij'))
     
-    N_M = 100
+    N_M = 30
     N_phi = N_M+1
     M_array = params['t2'] * np.linspace(-7., 7., N_M, endpoint=True)
     phi_array = np.linspace(-np.pi, np.pi, N_phi, endpoint=True)
@@ -164,7 +167,57 @@ def plot_Chern_Haldane():
     ax[2].pcolormesh(phi_array, M_array, Chern_array[...,1], shading='nearest', cmap='coolwarm')
     plt.show()
 
+def plot_Chern_Haldane_par():
+    t2 = 0.3
+    
+    N1 = 100
+    N2 = N1+1
+    k1 = np.linspace(-0.5, 0.5, N1, endpoint=False)
+    k2 = np.linspace(-0.5, 0.5, N2, endpoint=False)
+    k = np.array(np.meshgrid(k1,k2, indexing='ij'))
+    
+    N_M = 30
+    N_phi = N_M+1
+    M_array = t2 * np.linspace(-7., 7., N_M, endpoint=True)
+    phi_array = np.linspace(-np.pi, np.pi, N_phi, endpoint=True)
+    
+    def foo(M, phi):
+        params = {'t1':1., 't2':t2}
+        params['M'] = M
+        params['phi'] = phi
+        
+        evals, evecs = np.linalg.eigh( HaldaneHamiltonian(k, params) )
+        
+        gaps = find_gaps(evals)
+        Ch = Chern(evecs)
+        
+        return gaps, Ch
+    
+    num_cores = multiprocessing.cpu_count()
+    mi.sprint('num_cores',num_cores)
+    output = joblib.Parallel(n_jobs=num_cores)(joblib.delayed(foo)(M, phi) for M in M_array for phi in phi_array)
+    gap_array, Chern_array = zip(*output) # "Transpose" the output
+    
+    # Reshape the output
+    gap_array = np.reshape(np.array(gap_array), (N_M, N_phi))
+    Chern_array = np.reshape(np.array(Chern_array), (N_M, N_phi,2))
+    
+    mi.sprint('gap_array.shape', gap_array.shape)
+    mi.sprint('Chern_array.shape', Chern_array.shape)
+    
+    
+    fig, ax = plt.subplots(1,3, sharex=True, sharey=True)
+    ax[0].pcolormesh(phi_array, M_array, gap_array, shading='nearest', cmap='magma')
+    ax[1].pcolormesh(phi_array, M_array, Chern_array[...,0], shading='nearest', cmap='coolwarm')
+    ax[2].pcolormesh(phi_array, M_array, Chern_array[...,1], shading='nearest', cmap='coolwarm')
+    plt.show()
+
+def my_function(myList):
+    for element in myList:
+        print(element)
+    return result
+
 if __name__ == "__main__":
     np.set_printoptions(linewidth=750)
     
-    plot_Chern_Haldane()
+    plot_Chern_Haldane_par()
