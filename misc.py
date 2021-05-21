@@ -277,6 +277,14 @@ def polardecomp(mat):
     
     return U, P
 
+def find_gaps(evals):
+    
+    gaps_array = evals[..., 1:] - evals[..., :-1]
+    
+    gaps_min = np.amin(gaps_array, axis=tuple(range(gaps_array.ndim-1)))
+    
+    return np.squeeze(gaps_min)
+
 if __name__ == "__main__":
     np.set_printoptions(linewidth=750)
     

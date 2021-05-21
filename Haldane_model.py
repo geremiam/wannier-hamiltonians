@@ -8,14 +8,6 @@ import joblib
 
 import Chern_toolbox as CT
 
-def find_gaps(evals):
-    
-    gaps_array = evals[..., 1:] - evals[..., :-1]
-    
-    gaps_min = np.amin(gaps_array, axis=tuple(range(gaps_array.ndim-1)))
-    
-    return np.squeeze(gaps_min)
-
 # #######################################################################################
 
 def HaldaneHamiltonian(k, params, periodic=True):
@@ -101,7 +93,7 @@ def plot_Chern_Haldane(parallelize=False, plot=False):
         
         evals, evecs = np.linalg.eigh( HaldaneHamiltonian(k, params) )
         
-        gaps = find_gaps(evals)
+        gaps = mi.find_gaps(evals)
         Ch = CT.Chern(evecs)
         
         return gaps, Ch
@@ -129,7 +121,7 @@ def plot_Chern_Haldane(parallelize=False, plot=False):
                 
                 evals, evecs = np.linalg.eigh( HaldaneHamiltonian(k, params) )
                 
-                gap_array[M_idx, phi_idx] = find_gaps(evals)
+                gap_array[M_idx, phi_idx] = mi.find_gaps(evals)
                 Chern_array[M_idx, phi_idx,:] = CT.Chern(evecs)
     
     mi.sprint('gap_array.shape', gap_array.shape)

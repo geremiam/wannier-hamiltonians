@@ -11,6 +11,7 @@ from matplotlib import cm
 
 import misc as mi
 import Wannier_toolbox as WT
+import Chern_toolbox as CT
 
 def ham_tSOC(k, params):
     ''' Return the Bloch hamiltonian. Broadcasts in k. 
@@ -92,7 +93,7 @@ def crit_fields(params_tSOC, verbose=False):
 
 def plot_bandstructure(params_dict):
     
-    Nx, Ny = 50, 50
+    Nx, Ny = 1000, 1000
     kx = np.linspace(0., 2.*pi, Nx, endpoint=False)
     ky = np.linspace(0., 2.*pi, Ny, endpoint=False)
     k = np.array( np.meshgrid(kx, ky, indexing='ij') )
@@ -102,6 +103,7 @@ def plot_bandstructure(params_dict):
     mi.sprint('H_array.shape', H_array.shape)
     evals = mi.eigvals_paraunitary(H_array, tau3)
     mi.sprint('evals.shape', evals.shape)
+    mi.sprint('gaps: ', mi.find_gaps(evals))
     
     fig = plt.figure()
     ax = fig.gca(projection='3d')
@@ -109,6 +111,8 @@ def plot_bandstructure(params_dict):
     for n in range(evals.shape[-1]):
         surf = ax.plot_surface(k[0], k[1], evals[...,n], cmap=cm.coolwarm, linewidth=0, antialiased=False)
     plt.show()
+    
+    return
 
 def plot_Wannierbands(params_dict, plot=True):
     
@@ -121,6 +125,8 @@ def plot_Wannierbands(params_dict, plot=True):
     H_array, tau3 = ham_tSOC(k, params_dict)
     mi.sprint('H_array.shape', H_array.shape)
     evals, evecs = mi.eig_paraunitary(H_array, tau3)
+    mi.sprint('gaps: ', mi.find_gaps(evals))
+    mi.sprint('Chern numbers: ', CT.Chern(evecs, metric=tau3, imagtol=1.e-14))
     
     filled_bands = [4,5]
     mi.sprint('filled_bands',filled_bands)
@@ -175,6 +181,7 @@ def calculate_Wannierpol(params_dict):
     H_array, tau3 = ham_tSOC(k, params_dict)
     mi.sprint('H_array.shape', H_array.shape)
     evals, evecs = mi.eig_paraunitary(H_array, tau3)
+    mi.sprint('gaps: ', mi.find_gaps(evals))
     
     filled_bands = [4,5]
     mi.sprint('filled_bands',filled_bands)

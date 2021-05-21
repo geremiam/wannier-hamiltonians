@@ -61,7 +61,7 @@ def Chern_fromlinkvar(linkvar, imagtol=1.e-14):
 
 # #######################################################################################
 
-def Chern(evecs, imagtol=1.e-14, verbose=False):
-    U = link_variable(evecs, verbose=verbose)
+def Chern(evecs, metric=None, imagtol=1.e-14, verbose=False):
+    U = link_variable(evecs, metric=metric, verbose=verbose)
     C = Chern_fromlinkvar(U, imagtol=imagtol)
     return C
