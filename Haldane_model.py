@@ -1,3 +1,5 @@
+import argparse
+
 import numpy as np
 from numpy import sqrt, cos, sin
 import misc as mi
@@ -71,7 +73,7 @@ def check_equiv_of_hamiltonians():
     
     return
 
-def plot_Chern_Haldane(parallelize=False, plot=False):
+def plot_Chern_Haldane(parallelize=False, num_processes=None, plot=False):
     t1 = 1.
     t2 = 0.3
     
@@ -99,9 +101,9 @@ def plot_Chern_Haldane(parallelize=False, plot=False):
         return gaps, Ch
     
     if parallelize:
-        num_cores = multiprocessing.cpu_count()
-        mi.sprint('num_cores',num_cores)
-        output = joblib.Parallel(n_jobs=num_cores)(joblib.delayed(foo)(M, phi) for M in M_array for phi in phi_array)
+        mi.sprint('cpu_count', multiprocessing.cpu_count())
+        mi.sprint('num_processes',num_processes)
+        output = joblib.Parallel(n_jobs=num_processes)(joblib.delayed(foo)(M, phi) for M in M_array for phi in phi_array)
         gap_array, Chern_array = zip(*output) # "Transpose" the output
         
         # Reshape the output
@@ -137,6 +139,18 @@ def plot_Chern_Haldane(parallelize=False, plot=False):
     return gap_array, Chern_array
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.prog = "Haldane_model.py"
+    parser.description = "Calculates the Chern numbers for the Haldane model."
+    parser.epilog = "Example usage: python3 Haldane_model.py"
+    parser.add_argument("--processes", type=int, help="Number of processes to use in computation.")
+    args = parser.parse_args()
+    
+    if args.processes==None:
+        num_processes = 1
+    else:
+        num_processes = args.processes
+
     np.set_printoptions(linewidth=750)
     
-    plot_Chern_Haldane(parallelize=True, plot=True)
+    plot_Chern_Haldane(parallelize=True, num_processes=num_processes, plot=False)
