@@ -18,23 +18,29 @@ def ham_AFM(k, params):
     First dimension of k are the kx,ky components.
     '''
     # Unpack arguments
-    J = params['J']
+    Jx = params['Jx']
+    Jy = params['Jy']
+    Jz = params['Jz']
+    Jp = (Jx + Jy) / 2.
+    Jm = (Jx - Jy) / 2.
     
+    k = np.asarray(k)
     Kx, Ky = k # Split momentum into its components
-    Kx = Kx # Add length-one axes to broadcast against orbital axes
-    Ky = Ky
+    Kx = Kx[...,None,None] # Add length-one axes to broadcast against orbital axes
+    Ky = Ky[...,None,None]
     
     k_shape = k.shape[1:] # Shape of momentum arrays (excluding kx,ky components)
     mat = np.zeros(k_shape + (4,4), complex)
     
     gamma = 1. + np.exp(-1.j*Kx) + np.exp(-1.j*Ky) + np.exp(-1.j*(Kx+Ky))
     
+    block = np.array([[Jm, Jp],
+                      [Jp, Jm]])
+    
     # Populate the matrix
-    mat += 4. * J * np.eye(4)
-    mat[...,0,3] += J * gamma
-    mat[...,1,2] += J * gamma
-    mat[...,2,1] += J * np.conj(gamma)
-    mat[...,3,0] += J * np.conj(gamma)
+    mat += 4. * Jz * np.eye(4)
+    mat[...,0:2,2:4] += block * gamma
+    mat[...,2:4,0:2] += block * np.conj(gamma)
     
     tau3 = np.diag([1., -1., 1., -1.])
     
@@ -42,7 +48,7 @@ def ham_AFM(k, params):
 
 def plot_bandstructure(ham, params):
     
-    Nx, Ny = 95, 95
+    Nx, Ny = 101, 101
     kx = np.linspace(-pi, pi, Nx, endpoint=False)
     ky = np.linspace(-pi, pi, Ny, endpoint=False)
     k = np.array( np.meshgrid(kx, ky, indexing='ij') )
@@ -164,8 +170,11 @@ if __name__ == "__main__":
     
     np.set_printoptions(linewidth=750)
     
-    params = {'J':1.}
+    params = {'Jx':0.999, 'Jy':0.5, 'Jz':1.}
     mi.sprint('params',params)
+    
+    H_zerommentum, tau3 = ham_AFM([0.,0.], params)
+    print('Energies at k = 0 are {}.'.format(np.sort(np.linalg.eigvals(tau3 @ H_zerommentum))))
     
     if args.bandstructure:
         print()
