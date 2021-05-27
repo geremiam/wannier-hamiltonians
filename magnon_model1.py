@@ -2,6 +2,7 @@
 Driver file for computing the Wannier Hamiltonians and Wannier polarizations for the BBH 
 model. The model is defined here and the tools from the module Wannier_toolbox are used.
 '''
+import argparse
 import numpy as np
 from numpy import sin, cos, pi
 
@@ -12,62 +13,42 @@ from matplotlib import cm
 import misc as mi
 import Wannier_toolbox as WT
 
-def ham_tBBH(k, params):
+def ham_AFM(k, params):
     ''' Return the Bloch hamiltonian. Broadcasts in k. 
     First dimension of k are the kx,ky components.
     '''
     # Unpack arguments
     J = params['J']
-    K1h = params['K1h']
-    K2h = params['K2h']
-    K1v = params['K1v']
-    K2v = params['K2v']
-    
-    # Convenience aliases for Pauli matrices
-    s0 = np.eye(2)
-    s1 = np.array([[0,1], 
-                   [1,0]])
-    s2 = np.array([[0,-1j], 
-                   [1j,0]])
-    s3 = np.array([[1,0], 
-                   [0,-1]])
-    
-    # Matrices that enter into hamiltonian (4 by 4)
-    G000 = mi.KP([s0, s0, s0])
-    G10x = mi.KP([s1, s0, s0+s1])
-    G21x = mi.KP([s2, s1, s0+s1])
-    G22x = mi.KP([s2, s2, s0+s1])
-    G23x = mi.KP([s2, s3, s0+s1])
     
     Kx, Ky = k # Split momentum into its components
-    Kx = Kx[...,None,None] # Add length-one axes to broadcast against orbital axes
-    Ky = Ky[...,None,None]
+    Kx = Kx # Add length-one axes to broadcast against orbital axes
+    Ky = Ky
     
     k_shape = k.shape[1:] # Shape of momentum arrays (excluding kx,ky components)
-    mat = np.zeros(k_shape + G000.shape, complex)
+    mat = np.zeros(k_shape + (4,4), complex)
     
-    # Dimer term
-    mat += J * G000
-    # x-direction terms
-    mat += K1h/2. * G10x
-    mat += K2h/2. * ( cos(Kx) * G10x - sin(Kx) * G23x )
-    # y-direction terms
-    mat += - K1v/2. * G22x
-    mat += - K2v/2. * ( cos(Ky) * G22x + sin(Ky) * G21x )
+    gamma = 1. + np.exp(-1.j*Kx) + np.exp(-1.j*Ky) + np.exp(-1.j*(Kx+Ky))
     
-    tau3 = mi.KP([s0, s0, s3])
+    # Populate the matrix
+    mat += 4. * J * np.eye(4)
+    mat[...,0,3] += J * gamma
+    mat[...,1,2] += J * gamma
+    mat[...,2,1] += J * np.conj(gamma)
+    mat[...,3,0] += J * np.conj(gamma)
+    
+    tau3 = np.diag([1., -1., 1., -1.])
     
     return mat, tau3
 
-def plot_bandstructure(params):
+def plot_bandstructure(ham, params):
     
-    Nx, Ny = 50, 50
-    kx = np.linspace(0., 2.*pi, Nx, endpoint=False)
-    ky = np.linspace(0., 2.*pi, Ny, endpoint=False)
+    Nx, Ny = 95, 95
+    kx = np.linspace(-pi, pi, Nx, endpoint=False)
+    ky = np.linspace(-pi, pi, Ny, endpoint=False)
     k = np.array( np.meshgrid(kx, ky, indexing='ij') )
     mi.sprint('k.shape', k.shape)
     
-    H_array, tau3 = ham_tBBH(k, params)
+    H_array, tau3 = ham(k, params)
     mi.sprint('H_array.shape', H_array.shape)
     evals = mi.eigvals_paraunitary(H_array, tau3)
     mi.sprint('evals.shape', evals.shape)
@@ -79,19 +60,19 @@ def plot_bandstructure(params):
         surf = ax.plot_surface(k[0], k[1], evals[...,n], cmap=cm.coolwarm, linewidth=0, antialiased=False)
     plt.show()
 
-def plot_Wannierbands(params, plot=True):
+def plot_Wannierbands(ham, params, plot=True):
     
-    Nx, Ny = 200, 220
+    Nx, Ny = 201, 201
     kx = np.linspace(-pi, pi, Nx, endpoint=False)
     ky = np.linspace(-pi, pi, Ny, endpoint=False)
     k = np.array( np.meshgrid(kx, ky, indexing='ij') )
     mi.sprint('k.shape', k.shape)
     
-    H_array, tau3 = ham_tBBH(k, params)
+    H_array, tau3 = ham(k, params)
     mi.sprint('H_array.shape', H_array.shape)
     evals, evecs = mi.eig_paraunitary(H_array, tau3)
     
-    filled_bands = [4,5]
+    filled_bands = [2,3]
     mi.sprint('filled_bands',filled_bands)
     evecs_occ = evecs[...,filled_bands]
     
@@ -125,20 +106,20 @@ def plot_Wannierbands(params, plot=True):
     
     return
 
-def calculate_Wannierpol(params):
+def calculate_Wannierpol(ham, params):
     np.set_printoptions(linewidth=750)
     
-    Nx, Ny = 100, 150
+    Nx, Ny = 201, 201
     kx = np.linspace(-pi, pi, Nx, endpoint=False)
     ky = np.linspace(-pi, pi, Ny, endpoint=False)
     k = np.array( np.meshgrid(kx, ky, indexing='ij') )
     mi.sprint('k.shape', k.shape)
     
-    H_array, tau3 = ham_tBBH(k, params)
+    H_array, tau3 = ham(k, params)
     mi.sprint('H_array.shape', H_array.shape)
     evals, evecs = mi.eig_paraunitary(H_array, tau3)
     
-    filled_bands = [4,5]
+    filled_bands = [2,3]
     mi.sprint('filled_bands',filled_bands)
     evecs_occ = evecs[...,filled_bands]
     mi.sprint('evecs_occ.shape',evecs_occ.shape)
@@ -173,14 +154,25 @@ def calculate_Wannierpol(params):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.prog = "magnon_model1.py"
+    parser.description = "Wannier band analysis for the magnon band structure of an AFM."
+    parser.add_argument("--bandstructure", action="store_true", help="Plot bandstructure")
+    parser.add_argument("--Wannierbands", action="store_true", help="Plot Wannier bands")
+    parser.add_argument("--Wannierpol", action="store_true", help="Calculate Wannier polarization")
+    args = parser.parse_args()
+    
     np.set_printoptions(linewidth=750)
     
-    params_tBBH = {'J':0.3, 'K1h':0.11, 'K1v':0.0,
-                            'K2h':0.1, 'K2v':0.1}
-    mi.sprint('params_tBBH',params_tBBH)
+    params = {'J':1.}
+    mi.sprint('params',params)
     
-    plot_bandstructure(params_tBBH)
-    print()
-    plot_Wannierbands(params_tBBH)
-    print()
-    calculate_Wannierpol(params_tBBH)
+    if args.bandstructure:
+        print()
+        plot_bandstructure(ham_AFM, params)
+    if args.Wannierbands:
+        print()
+        plot_Wannierbands(ham_AFM, params)
+    if args.Wannierpol:
+        print()
+        calculate_Wannierpol(ham_AFM, params)
