@@ -1,8 +1,6 @@
 import argparse
-import pickle
 import numpy as np
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
 from numpy import pi, cos, sin
 
 pauli0 = np.eye(2)
@@ -20,6 +18,8 @@ def KP(list):
         output = np.kron(output, arr)
     
     return output
+
+# Polarization / Dipole moment
 
 def hamSSH(params_dict, N):
     ''' Return the Bloch hamiltonian. Broadcasts in k. '''
@@ -39,7 +39,7 @@ def hamSSH(params_dict, N):
     
     return mat
 
-def overlap_matrix_element(evecs, pm, kn, direction):
+def overlap_Pmatrix_element(evecs, pm, kn, direction):
     # evecs: momentum dimensions, sublattice index, band index
     # kn is tuple giving momentum indices and band index
     # pm = [(p1, p2, ...), m]
@@ -73,7 +73,7 @@ def overlap_matrix_element(evecs, pm, kn, direction):
     
     return O_pm_kn
 
-def overlap_matrix_det(evecs, filled_bands, direction):
+def overlap_matrix(OME, evecs, filled_bands, direction):
     
     k_shape = evecs.shape[:-2]
     dim = len(k_shape)
@@ -97,13 +97,19 @@ def overlap_matrix_det(evecs, filled_bands, direction):
     
     for idx_kn, kn in enumerate(kn_list):
         for idx_pm, pm in enumerate(kn_list):
-            O_occ[idx_pm, idx_kn] = overlap_matrix_element(evecs, pm, kn, direction)
+            O_occ[idx_pm, idx_kn] = OME(evecs, pm, kn, direction)
                     
     
     return O_occ
 
-def polarization(evecs, filled_bands, direction):
-    O_occ = overlap_matrix_det(evecs, filled_bands, direction)
+def polarization(evecs, filled_bands, direction, plot=False):
+    O_occ = overlap_matrix(overlap_Pmatrix_element, evecs, filled_bands, direction)
+    
+    if plot:
+        fig, ax = plt.subplots()
+        ax.matshow(np.angle(O_occ) * np.abs(O_occ))
+        plt.show()
+    
     det_O_occ = np.linalg.det(O_occ)
     
     pol = np.imag(np.log(det_O_occ)) / (2.*np.pi)
@@ -121,29 +127,34 @@ def pol_al(evecs):
     n_al = 0.5 * N_orb * np.sum(R_direction) / R_direction.size
     
     return n_al
+    
 
+# Quadrupole moment
 
 
 
 if __name__ == "__main__":
     np.set_printoptions(linewidth=750)
     
-    params = {'t1':0.5, 't2':1., 'm':0.001}
+    scenario = 'SSH'
     
-    direction = 0
-    filled_bands = [0]
+    if scenario=='SSH':
+        params = {'t1':1.5, 't2':1., 'm':0.}
     
-    verbose = False
+        direction = 0
+        filled_bands = [0]
     
-    for N in range(10, 100):
-        print('N = {}'.format(N))
-        mat = hamSSH(params, N)
-        if verbose: print('mat.shape = {}'.format(mat.shape))
+        verbose = False
+    
+        for N in range(30, 41):
+            print('N = {}'.format(N))
+            mat = hamSSH(params, N)
+            if verbose: print('mat.shape = {}'.format(mat.shape))
         
-        evals, evecs = np.linalg.eigh(mat)
-        if verbose: print('evecs.shape = {}'.format(evecs.shape))
+            evals, evecs = np.linalg.eigh(mat)
+            if verbose: print('evecs.shape = {}'.format(evecs.shape))
         
-        n_al = pol_al(evecs)
-        pol = polarization(evecs, filled_bands, direction)
+            n_al = pol_al(evecs)
+            pol = polarization(evecs, filled_bands, direction)
         
-        print('(pol - n_al) mod 1 = {}'.format((pol - n_al) % 1.))
+            print('(pol - n_al) mod 1 = {}'.format((pol - n_al) % 1.))
