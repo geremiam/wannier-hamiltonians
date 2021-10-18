@@ -68,7 +68,7 @@ def plot_bandstructure(ham, params):
 
 def plot_Wannierbands(ham, params, plot=True):
     
-    Nx, Ny = 201, 201
+    Nx, Ny = 201, 211
     kx = np.linspace(-pi, pi, Nx, endpoint=False)
     ky = np.linspace(-pi, pi, Ny, endpoint=False)
     k = np.array( np.meshgrid(kx, ky, indexing='ij') )
@@ -83,9 +83,12 @@ def plot_Wannierbands(ham, params, plot=True):
     evecs_occ = evecs[...,filled_bands]
     
     basepoints = [0,0]
-    Wilsonloops_list = WT.Wilson_loops(evecs_occ, basepoints, metric=tau3)
+    Wilsonloops_list = WT.Wilson_loops(evecs_occ, basepoints, force_unitary=False, metric=tau3)
     
     Wx = Wilsonloops_list[0]
+    
+    mi.sprint('Largest deviation from unitarity', np.amax(np.abs(Wx @ np.swapaxes(Wx.conj(), -1, -2) - mi.stackedidentity_like(Wx))) )
+    
     mi.sprint('Wx.shape',Wx.shape)
     px = WT.pol(Wx, atol=1.e-14, branchtol=0., verbose=True)
     mi.sprint('px', px)

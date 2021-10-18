@@ -2,6 +2,7 @@
 Driver file for computing the Wannier Hamiltonians and Wannier polarizations for the BBH 
 model. The model is defined here and the tools from the module Wannier_toolbox are used.
 '''
+import argparse
 import numpy as np
 from numpy import sin, cos, pi
 
@@ -173,14 +174,26 @@ def calculate_Wannierpol(params):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.prog = "triplon_model1.py"
+    parser.description = "Wannier band analysis for the tBBH model."
+    parser.add_argument("--bandstructure", action="store_true", help="Plot bandstructure")
+    parser.add_argument("--Wannierbands", action="store_true", help="Plot Wannier bands")
+    parser.add_argument("--Wannierpol", action="store_true", help="Calculate Wannier polarization")
+    args = parser.parse_args()
+    
     np.set_printoptions(linewidth=750)
     
     params_tBBH = {'J':0.3, 'K1h':0.11, 'K1v':0.0,
                             'K2h':0.1, 'K2v':0.1}
     mi.sprint('params_tBBH',params_tBBH)
     
-    plot_bandstructure(params_tBBH)
-    print()
-    plot_Wannierbands(params_tBBH)
-    print()
-    calculate_Wannierpol(params_tBBH)
+    if args.bandstructure:
+        print()
+        plot_bandstructure(params_tBBH)
+    if args.Wannierbands:
+        print()
+        plot_Wannierbands(params_tBBH)
+    if args.Wannierpol:
+        print()
+        calculate_Wannierpol(params_tBBH)

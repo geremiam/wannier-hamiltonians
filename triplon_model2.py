@@ -2,6 +2,7 @@
 Driver file for computing the Wannier Hamiltonians and Wannier polarizations for the BBH 
 model. The model is defined here and the tools from the module Wannier_toolbox are used.
 '''
+import argparse
 import numpy as np
 from numpy import sin, cos, pi
 
@@ -161,9 +162,9 @@ def plot_Wannierbands(params_dict, plot=True):
             if shift_branch:
                 axis.axhline(0, color='C7')
                 axis.axhline(1, color='C7')
-#             else:
-#                 axis.axhline(-0.5, color='C7')
-#                 axis.axhline(0.5, color='C7')
+            else:
+                axis.axhline(-0.5, color='C7')
+                axis.axhline(0.5, color='C7')
         plt.show()
     
     return
@@ -218,6 +219,14 @@ def calculate_Wannierpol(params_dict):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.prog = "triplon_model2.py"
+    parser.description = "Wannier band analysis for the tSOC model."
+    parser.add_argument("--bandstructure", action="store_true", help="Plot bandstructure")
+    parser.add_argument("--Wannierbands", action="store_true", help="Plot Wannier bands")
+    parser.add_argument("--Wannierpol", action="store_true", help="Calculate Wannier polarization")
+    args = parser.parse_args()
+    
     np.set_printoptions(linewidth=750)
     
     params_tSOC = {
@@ -234,10 +243,16 @@ if __name__ == "__main__":
     hc1, hc2, hsc = crit_fields(params_tSOC, verbose=True)
     
     params_tSOC['h'] = 1.1 * hc2
+#     params_tSOC['hs'] = 1.05 * hsc
     mi.sprint('h', params_tSOC['h'])
+    mi.sprint('hs', params_tSOC['hs'])
     
-    plot_bandstructure(params_tSOC)
-    print()
-    plot_Wannierbands(params_tSOC)
-    print()
-    calculate_Wannierpol(params_tSOC)
+    if args.bandstructure:
+        print()
+        plot_bandstructure(params_tSOC)
+    if args.Wannierbands:
+        print()
+        plot_Wannierbands(params_tSOC)
+    if args.Wannierpol:
+        print()
+        calculate_Wannierpol(params_tSOC)

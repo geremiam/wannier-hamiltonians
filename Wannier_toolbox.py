@@ -107,7 +107,7 @@ def Wilson_loop_directional(Fdirectional, axis, basepoint, atol=1.e-13):
 
 # External routines #####################################################################
 
-def Wilson_loops(evecs_occ, basepoints, metric=None):
+def Wilson_loops(evecs_occ, basepoints, metric=None, force_unitary=True):
     '''
     Returns Wilson loops in every direction from different basepoints. 
     Return is Wilsonloops.
@@ -119,7 +119,7 @@ def Wilson_loops(evecs_occ, basepoints, metric=None):
         (Momentum axes except the loop direction) + (Nocc, Nocc)
     '''
     
-    F = Wilson_line_elements(evecs_occ, metric=metric, unitary=True, verbose=False)
+    F = Wilson_line_elements(evecs_occ, metric=metric, unitary=force_unitary, verbose=False)
     
     if basepoints=='all':
         Wilsonloops_list = []
